@@ -1,7 +1,6 @@
 import socket
 import pymongo
 import datetime
-import pytz
 
 # Helper function to get the device UID
 def get_device_uid(device_name):
@@ -39,13 +38,13 @@ def query_one(meta, virtual):
     total_moisture = 0
 
     for doc in fridge1_docs:
-        moisture = doc.get("payload", {}).get("Moisture Meter")
+        moisture = doc.get("payload", {}).get("Moisture Meter - Sensor1")
         if moisture:
             total_docs += 1
             total_moisture += float(moisture)
 
     for doc in fridge2_docs:
-        moisture = doc.get("payload", {}).get("Moisture Meter")
+        moisture = doc.get("payload", {}).get("Moisture Meter - Sensor2")
         if moisture:
             total_docs += 1
             total_moisture += float(moisture)
@@ -58,13 +57,13 @@ def query_one(meta, virtual):
 
 # Query 2: Average Water Usage in Dishwasher
 def query_two(meta, virtual):
-    dishwasher_uid = get_device_uid("Smart Dishwasher")
-    if not dishwasher_uid:
-        return "Error: Metadata for the dishwasher is missing. Cannot process query."
+    # Use the confirmed assetUid for Smart Dishwasher
+    dishwasher_uid = "2206b67d-9880-4364-957c-69c2573806a7"
 
     current_time = datetime.datetime.now(datetime.timezone.utc)
     three_hours_ago = current_time - datetime.timedelta(hours=3)
 
+    # Query dishwasher documents in the last 3 hours
     dishwasher_query = {
         "payload.parent_asset_uid": dishwasher_uid,
         "time": {"$gte": three_hours_ago, "$lte": current_time}
@@ -76,6 +75,7 @@ def query_two(meta, virtual):
     total_water = 0
 
     for doc in dishwasher_docs:
+        # Access the Water Flow Sensor field
         water_usage = doc.get("payload", {}).get("Water Flow Sensor")
         if water_usage:
             total_cycles += 1
@@ -108,7 +108,14 @@ def query_three(meta, virtual):
 
         docs = virtual.find(query)
 
-        total_consumption = sum(float(doc.get("payload", {}).get("Ammeter", 0)) for doc in docs)
+        # Use correct field names for electricity data
+        electricity_field = {
+            "Smart Refrigerator": "Ammeter",
+            "Smart Refrigerator 2": "Ammeter 2",
+            "Smart Dishwasher": "Ammeter (dishwasher)"
+        }[device]
+
+        total_consumption = sum(float(doc.get("payload", {}).get(electricity_field, 0)) for doc in docs)
         if total_consumption > max_consumption:
             max_consumption = total_consumption
             max_device = device
