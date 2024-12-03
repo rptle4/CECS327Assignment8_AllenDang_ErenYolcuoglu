@@ -1,35 +1,55 @@
 import socket
+import ipaddress
 
-# Prompt the user to enter the IP address and port number of the server
-server_ip = input("Enter the IP address of the server: ") #this will take input from comman line as prompted in the assignment 
-server_port = int(input("Enter the port number of the server: ")) #will take port number
 
-while True: #as requested doing the while loop so it will keep asking untill we exit
-    # Creating a TCP/IP socket
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def run():
+    try:
 
-    try:#using a try catch error since prof asked if there will be error response error happened.
-        # Connect the socket to the server's IP address and port number
-        server_address = (server_ip, server_port)
-        client_socket.connect(server_address)
+        server_ip = str(ipaddress.ip_address(input("Enter IP Address: ")))
+        server_port = int(input("Enter Server port: "))
+        Socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        Socket.connect((server_ip, server_port))
+        print("Connection established\n")
 
-        # # havind user type some message to the server once he connects
-        message = input("Enter a message to send to the server: ")
+    except (ValueError, TypeError) as e:
+        print(f"Error: Could not connect to the server. {e}")
 
-        # Sending message in to the serever
-        client_socket.sendall(message.encode())
+    maxBytes = 1024
 
-        # Receive the response from the server and print it
-        data = client_socket.recv(1024)
-        # print("Server response: {}".format(data.decode()))
+    while True:
+        query = queries()
+        Socket.send(bytearray(str(query), encoding='utf-8'))
+        print(f"Message sent: {query}")
 
-        # gets the message from the server and will decode and print 
-        data = client_socket.recv(1024)
-        print("Server: {}".format(data.decode()))
+        if query == '4':
+            print("Exiting the program.")
+            break
 
-    except Exception as e: #this will throw an error as i told earlier 
-        print("Error occurred: {}".format(e))
+        server_response = Socket.recv(maxBytes)
+        print("Server's reply:", server_response.decode())
 
-    finally:
-        # Clean up the socket
-        client_socket.close()
+    Socket.close()
+    print("Connection with the server is now closed")
+
+def queries():
+    valid_input = ["1", "2", "3", "4"]
+    user_input = None
+
+    while user_input not in valid_input:
+        print("Select one of the following three queries:\n",
+              "1. What is the average moisture inside my kitchen fridge in the past three hours?\n",
+              "2. What is the average water consumption per cycle in my smart dishwasher?\n",
+              "3. Which device consumed more electricity among my three IoT devices (two refridgerators and a dishwasher)\n",
+              "4. Exit the program.\n")
+
+        user_input = str(input("Select '1', '2', '3', or '4'): "))
+        if user_input not in valid_input:
+            print("Invalid input. Please try again.\n")
+
+    return user_input
+
+if __name__ == "__main__":
+    run()
+
+
+
